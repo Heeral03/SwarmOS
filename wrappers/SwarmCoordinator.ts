@@ -8,6 +8,7 @@ import {
     Sender,
     SendMode,
     toNano,
+    TupleBuilder,
 } from '@ton/core';
 
 export const TASK_OPEN      = 0;
@@ -26,6 +27,35 @@ const OP_VERIFY_RESULT  = 0x2005;
 const OP_DISPUTE_TASK   = 0x2006;
 const OP_CANCEL_TASK    = 0x2007;
 const OP_REFUND_EXPIRED = 0x2008;
+
+export type TaskExtra = {
+    descriptionHash:    bigint;
+    bidDeadline:        number;
+    workDeadline:       number;
+    verifyDeadline:     number;
+    resultHash:         bigint;
+    createdAt:          number;
+    bidCount:           number;
+};
+
+export type TaskRecord = {
+    taskId:             bigint;
+    poster:             Address;
+    requiredCapability: number;
+    budget:             bigint;
+    state:              number;
+    assignedAgent:      Address;
+    winningBid:         bigint;
+    extra:              TaskExtra;
+};
+
+export type BidRecord = {
+    agent:        Address;
+    amount:       bigint;
+    deliveryTime: number;
+    proposalHash: bigint;
+    placedAt:     number;
+};
 
 export type SwarmCoordinatorConfig = {
     owner:             Address;
@@ -214,5 +244,63 @@ export class SwarmCoordinator implements Contract {
     async getAccumulatedFees(provider: ContractProvider): Promise<bigint> {
         const r = await provider.get('getAccumulatedFees', []);
         return r.stack.readBigNumber();
+    }
+
+    async getTask(provider: ContractProvider, taskId: bigint): Promise<TaskRecord | null> {
+        const r = await provider.get('getTask', [{ type: 'int', value: taskId }]);
+        const cell = r.stack.readCellOpt();
+        if (!cell) return null;
+        const sc_preview = cell.beginParse();
+        console.log(`DEBUG: getTask BOC hex: ${cell.toBoc().toString('hex')}, bits: ${sc_preview.remainingBits}, refs: ${sc_preview.remainingRefs}`);
+
+        const sc = cell.beginParse();
+        const resTaskId = sc.loadUintBig(64);
+        const poster = sc.loadAddress();
+        const requiredCapability = sc.loadUint(8);
+        const budget = sc.loadCoins();
+        const state = sc.loadUint(8);
+        const assignedAgent = sc.loadAddress();
+        const winningBid = sc.loadCoins();
+        const extraCell = sc.loadRef();
+        
+        const esc = extraCell.beginParse();
+        const extra: TaskExtra = {
+            descriptionHash:    esc.loadUintBig(256),
+            bidDeadline:        esc.loadUint(32),
+            workDeadline:       esc.loadUint(32),
+            verifyDeadline:     esc.loadUint(32),
+            resultHash:         esc.loadUintBig(256),
+            createdAt:          esc.loadUint(32),
+            bidCount:           esc.loadUint(8),
+        };
+
+        return {
+            taskId: resTaskId,
+            poster,
+            requiredCapability,
+            budget,
+            state,
+            assignedAgent,
+            winningBid,
+            extra,
+        };
+    }
+
+    async getBid(provider: ContractProvider, taskId: bigint, agent: Address): Promise<BidRecord | null> {
+        const tb = new TupleBuilder();
+        tb.writeNumber(taskId);
+        tb.writeAddress(agent);
+        const r = await provider.get('getBid', tb.build());
+        const cell = r.stack.readCellOpt();
+        if (!cell) return null;
+
+        const sc = cell.beginParse();
+        return {
+            agent:        sc.loadAddress(),
+            amount:       sc.loadCoins(),
+            deliveryTime: sc.loadUint(32),
+            proposalHash: sc.loadUintBig(256),
+            placedAt:     sc.loadUint(32),
+        };
     }
 }

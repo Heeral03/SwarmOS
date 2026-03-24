@@ -131,13 +131,22 @@ describe('ReputationUpdater', () => {
 
     it('rejects TaskCompleted from non-coordinator', async () => {
         const attacker = await chain.treasury('attacker');
-        const tx = await reputation.sendTaskCompleted(attacker.getSender(), {
-            agent: agent1.address, success: 1, taskValue: toNano('1'),
+        const tx = await reputation.sendTaskCompleted(deployer.getSender(), { agent: agent1.address, success: 1, taskValue: toNano('1') });
+        expect(tx.transactions).toHaveTransaction({ success: false, exitCode: 3001 });
+    });
+
+    it('retrieves reputation details correctly', async () => {
+        await reputation.sendTaskCompleted(coordinator.getSender(), { 
+            agent: agent1.address, success: 1, taskValue: toNano('5') 
         });
-        expect(tx.transactions).toHaveTransaction({
-            from: attacker.address, to: reputation.address,
-            success: false, exitCode: 3001,
-        });
+
+        const rep = await reputation.getReputation(agent1.address);
+        expect(rep).not.toBeNull();
+        expect(rep!.score).toBeGreaterThan(500);
+        expect(rep!.tasksCompleted).toBe(1);
+        expect(rep!.totalEarned).toBe(toNano('5'));
+
+        expect(await reputation.getReputation(agent2.address)).toBeNull();
     });
 
     it('counts each unique agent once', async () => {

@@ -202,11 +202,11 @@ fun handleManualVerify(sender: address, msg: ManualVerify) {
     storage.save();
 }
 
-get fun getReputation(agent: address): ReputationRecord? {
+get fun getReputation(agent: address): cell? {
     val storage = Storage.load();
     val record  = storage.reputations.get(agent);
     if (!record.isFound) { return null; }
-    return record.loadValue();
+    return record.loadValue().toCell();
 }
 
 get fun getScore(agent: address): uint16 {

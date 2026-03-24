@@ -22,6 +22,18 @@ export const BADGE_RELIABLE      = 64;
 const OP_TASK_COMPLETED = 0x3001;
 const OP_MANUAL_VERIFY  = 0x3002;
 
+export type ReputationRecord = {
+    agentAddress:    Address;
+    score:           number;
+    peakScore:       number;
+    tasksCompleted:  number;
+    tasksFailed:     number;
+    badges:          number;
+    lastUpdated:     number;
+    firstSeen:       number;
+    totalEarned:     bigint;
+};
+
 export type ReputationUpdaterConfig = {
     owner:              Address;
     coordinatorAddress: Address;
@@ -122,5 +134,26 @@ export class ReputationUpdater implements Contract {
     async getAgentCount(provider: ContractProvider): Promise<number> {
         const r = await provider.get('getAgentCount', []);
         return r.stack.readNumber();
+    }
+
+    async getReputation(provider: ContractProvider, agent: Address): Promise<ReputationRecord | null> {
+        const tb = new TupleBuilder();
+        tb.writeAddress(agent);
+        const r = await provider.get('getReputation', tb.build());
+        const cell = r.stack.readCellOpt();
+        if (!cell) return null;
+
+        const sc = cell.beginParse();
+        return {
+            agentAddress:    sc.loadAddress(),
+            score:           sc.loadUint(16),
+            peakScore:       sc.loadUint(16),
+            tasksCompleted:  sc.loadUint(32),
+            tasksFailed:     sc.loadUint(32),
+            badges:          sc.loadUint(8),
+            lastUpdated:     sc.loadUint(32),
+            firstSeen:       sc.loadUint(32),
+            totalEarned:     sc.loadCoins(),
+        };
     }
 }

@@ -189,4 +189,27 @@ describe('SwarmCoordinator', () => {
         });
         expect(await coordinator.getNextTaskId()).toBe(2n);
     });
+
+    it('retrieves task and bid details correctly', async () => {
+        await coordinator.sendPostTask(poster.getSender(), {
+            descriptionHash: DESC_HASH, requiredCapability: 1,
+            workDeadlineDelta: 3600, payment: toNano('1'),
+        });
+        await coordinator.sendBidTask(agent1.getSender(), {
+            taskId: 0n, amount: toNano('0.8'), deliveryTime: 1800, proposalHash: PROPOSAL_HASH,
+        });
+
+        const task = await coordinator.getTask(0n);
+        expect(task).not.toBeNull();
+        expect(task!.budget).toBe(toNano('1'));
+        expect(task!.poster.equals(poster.address)).toBe(true);
+
+        const bid = await coordinator.getBid(0n, agent1.address);
+        expect(bid).not.toBeNull();
+        expect(bid!.amount).toBe(toNano('0.8'));
+        expect(bid!.agent.equals(agent1.address)).toBe(true);
+
+        expect(await coordinator.getTask(999n)).toBeNull();
+        expect(await coordinator.getBid(0n, agent2.address)).toBeNull();
+    });
 });

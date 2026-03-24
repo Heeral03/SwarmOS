@@ -78,7 +78,7 @@ struct BidRecord {
 // ── Storage ───────────────────────────────────────────────────
 
 struct Storage {
-    tasks:             map<uint64, Cell<TaskRecord>>
+    tasks:             map<uint64, TaskRecord>
     bids:              map<uint64, BidRecord>
     nextTaskId:        uint64
     registryAddress:   address
@@ -248,7 +248,7 @@ fun handlePostTask(sender: address, msgValue: coins, msg: PostTask) {
         extra:              extra.toCell(),
     };
 
-    storage.tasks.set(taskId, task.toCell());
+    storage.tasks.set(taskId, task); // Store struct directly
     storage.nextTaskId += 1;
     storage.save();
 }
@@ -261,7 +261,7 @@ fun handleBidTask(sender: address, msg: BidTask) {
 
     assert(storage.tasks.exists(msg.taskId)) throw ERR_TASK_NOT_FOUND;
 
-    var task  = storage.tasks.mustGet(msg.taskId).load();
+    var task  = storage.tasks.mustGet(msg.taskId);
     var extra = task.extra.load();
 
     assert(task.state == TASK_OPEN)       throw ERR_TASK_NOT_OPEN;
@@ -284,7 +284,7 @@ fun handleBidTask(sender: address, msg: BidTask) {
     storage.bids.set(bidKey, bid);
     extra.bidCount += 1;
     task.extra = extra.toCell();
-    storage.tasks.set(msg.taskId, task.toCell());
+    storage.tasks.set(msg.taskId, task); // Store struct directly
     storage.save();
 }
 
@@ -296,7 +296,7 @@ fun handleAcceptBid(sender: address, msg: AcceptBid) {
 
     assert(storage.tasks.exists(msg.taskId)) throw ERR_TASK_NOT_FOUND;
 
-    var task  = storage.tasks.mustGet(msg.taskId).load();
+    var task  = storage.tasks.mustGet(msg.taskId);
     var extra = task.extra.load();
 
     assert(sender == task.poster)         throw ERR_NOT_TASK_POSTER;
@@ -313,7 +313,7 @@ fun handleAcceptBid(sender: address, msg: AcceptBid) {
     task.assignedAgent = msg.agent;
     task.winningBid    = bid.amount;
 
-    storage.tasks.set(msg.taskId, task.toCell());
+    storage.tasks.set(msg.taskId, task); // Store struct directly
     storage.save();
 }
 
@@ -324,7 +324,7 @@ fun handleSubmitResult(sender: address, msg: SubmitResult) {
 
     assert(storage.tasks.exists(msg.taskId)) throw ERR_TASK_NOT_FOUND;
 
-    var task  = storage.tasks.mustGet(msg.taskId).load();
+    var task  = storage.tasks.mustGet(msg.taskId);
     var extra = task.extra.load();
 
     assert(sender == task.assignedAgent)  throw ERR_NOT_ASSIGNED_AGENT;
@@ -336,7 +336,7 @@ fun handleSubmitResult(sender: address, msg: SubmitResult) {
     task.extra      = extra.toCell();
 
 
-    storage.tasks.set(msg.taskId, task.toCell());
+    storage.tasks.set(msg.taskId, task); // Store struct directly
     storage.save();
 }
 
@@ -347,7 +347,7 @@ fun handleVerifyResult(sender: address, msg: VerifyResult) {
 
     assert(storage.tasks.exists(msg.taskId)) throw ERR_TASK_NOT_FOUND;
 
-    var task = storage.tasks.mustGet(msg.taskId).load();
+    var task = storage.tasks.mustGet(msg.taskId);
 
     assert(sender == task.poster)          throw ERR_NOT_TASK_POSTER;
     assert(task.state == TASK_VERIFYING)   throw ERR_TASK_NOT_VERIFYING;
@@ -357,7 +357,7 @@ fun handleVerifyResult(sender: address, msg: VerifyResult) {
     val budgetRefund = task.budget - task.winningBid;
 
     task.state = TASK_COMPLETED as uint8;
-    storage.tasks.set(msg.taskId, task.toCell());
+    storage.tasks.set(msg.taskId, task); // Store struct directly
     storage.accumulatedFees += fee;
     storage.save();
 
@@ -383,13 +383,13 @@ fun handleDisputeTask(sender: address, msg: DisputeTask) {
 
     assert(storage.tasks.exists(msg.taskId)) throw ERR_TASK_NOT_FOUND;
 
-    var task = storage.tasks.mustGet(msg.taskId).load();
+    var task = storage.tasks.mustGet(msg.taskId);
 
     assert(sender == task.poster)         throw ERR_NOT_TASK_POSTER;
     assert(task.state == TASK_VERIFYING)  throw ERR_TASK_NOT_VERIFYING;
 
     task.state = TASK_DISPUTED as uint8;
-    storage.tasks.set(msg.taskId, task.toCell());
+    storage.tasks.set(msg.taskId, task); // Store struct directly
     storage.save();
 }
 
@@ -400,7 +400,7 @@ fun handleCancelTask(sender: address, msg: CancelTask) {
 
     assert(storage.tasks.exists(msg.taskId)) throw ERR_TASK_NOT_FOUND;
 
-    var task  = storage.tasks.mustGet(msg.taskId).load();
+    var task  = storage.tasks.mustGet(msg.taskId);
     var extra = task.extra.load();
 
     assert(sender == task.poster)    throw ERR_NOT_TASK_POSTER;
@@ -409,7 +409,8 @@ fun handleCancelTask(sender: address, msg: CancelTask) {
 
 
     task.state = TASK_CANCELLED as uint8;
-    storage.tasks.set(msg.taskId, task.toCell());
+    
+    storage.tasks.set(msg.taskId, task); // Store struct directly
     storage.save();
 
     sendTon(task.poster, task.budget);
@@ -422,7 +423,7 @@ fun handleRefundExpired(msg: RefundExpired) {
 
     assert(storage.tasks.exists(msg.taskId)) throw ERR_TASK_NOT_FOUND;
 
-    var task  = storage.tasks.mustGet(msg.taskId).load();
+    var task  = storage.tasks.mustGet(msg.taskId);
     var extra = task.extra.load();
 
     assert(task.state == TASK_OPEN)            throw ERR_TASK_NOT_OPEN;
@@ -430,7 +431,7 @@ fun handleRefundExpired(msg: RefundExpired) {
 
 
     task.state = TASK_EXPIRED as uint8;
-    storage.tasks.set(msg.taskId, task.toCell());
+    storage.tasks.set(msg.taskId, task); // Store struct directly
     storage.save();
 
     sendTon(task.poster, task.budget);
@@ -441,6 +442,21 @@ fun handleRefundExpired(msg: RefundExpired) {
 get fun getNextTaskId(): uint64 {
     val storage = Storage.load();
     return storage.nextTaskId;
+}
+
+get fun getTask(taskId: uint64): cell? {
+    val storage = Storage.load();
+    val record = storage.tasks.get(taskId);
+    if (!record.isFound) { return null; }
+    return record.loadValue().toCell();
+}
+
+get fun getBid(taskId: uint64, agent: address): cell? {
+    val storage = Storage.load();
+    val bidKey = makeBidKey(taskId, agent);
+    val record = storage.bids.get(bidKey);
+    if (!record.isFound) { return null; }
+    return record.loadValue().toCell();
 }
 
 get fun getAccumulatedFees(): coins {

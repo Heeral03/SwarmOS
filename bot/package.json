@@ -1,0 +1,16 @@
+{
+  "name": "@ton-swarmos/telegram-bot",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node bot.js",
+    "dev": "node --watch bot.js"
+  },
+  "dependencies": {
+    "grammy": "^1.21.0",
+    "@ton/ton": "^15.0.0",
+    "@ton/core": "^0.62.0",
+    "@ton/crypto": "^3.3.0",
+    "dotenv": "^16.0.0"
+  }
+}

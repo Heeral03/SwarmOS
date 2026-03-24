@@ -234,6 +234,13 @@ get fun getAgentCount(): uint32 {
     return storage.agentCount
 }
 
+get fun getAgent(agent: address): cell? {
+    val storage = Storage.load();
+    val record = storage.agents.get(agent);
+    if (!record.isFound) { return null; }
+    return record.loadValue().toCell();
+}
+
 get fun getTotalStake(): coins {
     val storage = Storage.load();
     return storage.totalStake

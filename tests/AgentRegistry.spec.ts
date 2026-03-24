@@ -144,6 +144,21 @@ describe('AgentRegistry', () => {
             endpointHash: HASH, stake: toNano('1'),
         });
         const tx = await registry.sendActivateAgent(agent1.getSender());
-        expect(tx.transactions).toHaveTransaction({ success: false, exitCode: 1005 });
+        expect(tx.transactions).toHaveTransaction({ from: agent1.address, success: false, exitCode: 1005 });
+    });
+
+    it('retrieves agent details correctly', async () => {
+        await registry.sendRegisterAgent(agent1.getSender(), {
+            capabilities: 1, pricePerUnit: toNano('0.1'), endpointHash: 123n,
+            stake: toNano('1'), // Added stake to meet minimum requirement
+        });
+
+        const agent = await registry.getAgent(agent1.address);
+        expect(agent).not.toBeNull();
+        expect(agent!.pricePerUnit).toBe(toNano('0.1'));
+        expect(agent!.capabilities).toBe(1);
+        expect(agent!.extra.isActive).toBe(1);
+
+        expect(await registry.getAgent(agent2.address)).toBeNull();
     });
 });

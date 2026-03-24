@@ -8,6 +8,7 @@ import {
     Sender,
     SendMode,
     toNano,
+    TupleBuilder,
 } from '@ton/core';
 
 export const CAP_PRICE_SCANNER    = 1;
@@ -22,6 +23,24 @@ const OP_REGISTER_AGENT   = 0x1001;
 const OP_UPDATE_AGENT     = 0x1002;
 const OP_DEACTIVATE_AGENT = 0x1003;
 const OP_ACTIVATE_AGENT   = 0x1004;
+
+export type AgentExtra = {
+    reputationScore: number;
+    tasksCompleted:  number;
+    tasksFailed:     number;
+    stake:           bigint;
+    registeredAt:    number;
+    lastActive:      number;
+    isActive:        number;
+};
+
+export type AgentRecord = {
+    agentAddress:    Address;
+    capabilities:    number;
+    pricePerUnit:    bigint;
+    endpointHash:    bigint;
+    extra:           AgentExtra;
+};
 
 export type AgentRegistryConfig = { owner: Address };
 
@@ -127,5 +146,39 @@ export class AgentRegistry implements Contract {
     async getOwner(provider: ContractProvider): Promise<Address> {
         const r = await provider.get('getOwner', []);
         return r.stack.readAddress();
+    }
+
+    async getAgent(provider: ContractProvider, agent: Address): Promise<AgentRecord | null> {
+        const tb = new TupleBuilder();
+        tb.writeAddress(agent);
+        const r = await provider.get('getAgent', tb.build());
+        const cell = r.stack.readCellOpt();
+        if (!cell) return null;
+
+        const sc = cell.beginParse();
+        const agentAddress = sc.loadAddress();
+        const capabilities = sc.loadUint(8);
+        const pricePerUnit = sc.loadCoins();
+        const endpointHash = sc.loadUintBig(256);
+        const extraCell = sc.loadRef();
+
+        const esc = extraCell.beginParse();
+        const extra: AgentExtra = {
+            reputationScore: esc.loadUint(16),
+            tasksCompleted:  esc.loadUint(32),
+            tasksFailed:     esc.loadUint(32),
+            stake:           esc.loadCoins(),
+            registeredAt:    esc.loadUint(32),
+            lastActive:      esc.loadUint(32),
+            isActive:        esc.loadUint(8),
+        };
+
+        return {
+            agentAddress,
+            capabilities,
+            pricePerUnit,
+            endpointHash,
+            extra,
+        };
     }
 }
