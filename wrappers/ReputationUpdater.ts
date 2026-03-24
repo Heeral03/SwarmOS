@@ -21,6 +21,7 @@ export const BADGE_RELIABLE      = 64;
 
 const OP_TASK_COMPLETED = 0x3001;
 const OP_MANUAL_VERIFY  = 0x3002;
+const OP_UPDATE_COORDINATOR = 0x3003;
 
 export type ReputationRecord = {
     agentAddress:    Address;
@@ -105,6 +106,21 @@ export class ReputationUpdater implements Contract {
         });
     }
 
+    async sendUpdateCoordinator(
+        provider: ContractProvider,
+        via: Sender,
+        opts: { coordinator: Address },
+    ) {
+        await provider.internal(via, {
+            value: toNano('0.05'),
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: beginCell()
+                .storeUint(OP_UPDATE_COORDINATOR, 32)
+                .storeAddress(opts.coordinator)
+                .endCell(),
+        });
+    }
+
     async getScore(provider: ContractProvider, agent: Address): Promise<number> {
         const tb = new TupleBuilder();
         tb.writeAddress(agent);
@@ -129,6 +145,16 @@ export class ReputationUpdater implements Contract {
         tb.writeNumber(threshold);
         const r = await provider.get('isTrusted', tb.build());
         return r.stack.readNumber() === 1;
+    }
+
+    async getPioneerCount(provider: ContractProvider): Promise<number> {
+        const r = await provider.get('getPioneerCount', []);
+        return r.stack.readNumber();
+    }
+
+    async getOwner(provider: ContractProvider): Promise<Address> {
+        const r = await provider.get('getOwner', []);
+        return r.stack.readAddress();
     }
 
     async getAgentCount(provider: ContractProvider): Promise<number> {

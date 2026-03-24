@@ -75,6 +75,17 @@ struct BidRecord {
     placedAt:     uint32
 }
 
+fun BidRecord.toCell(self): cell {
+    return beginCell()
+        .storeAddress(self.agent)
+        .storeCoins(self.amount)
+        .storeUint(self.deliveryTime, 32)
+        .storeUint(self.proposalHash, 256)
+        .storeUint(self.placedAt, 32)
+        .endCell();
+}
+
+
 // ── Storage ───────────────────────────────────────────────────
 
 struct Storage {
@@ -136,10 +147,7 @@ struct RefundExpired {
     taskId: uint64
 }
 
-struct ReputationUpdate {
-    agent:   address
-    success: uint8
-}
+// Deleted ReputationUpdate struct as it is serialized manually
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -367,11 +375,18 @@ fun handleVerifyResult(sender: address, msg: VerifyResult) {
         sendTon(task.poster, budgetRefund);
     }
 
+    val repBody = beginCell()
+        .storeUint(0x3001, 32) // OP_TASK_COMPLETED
+        .storeAddress(task.assignedAgent)
+        .storeUint(1, 8)       // success = 1
+        .storeCoins(task.winningBid) // taskValue
+        .endCell();
+
     val repMsg = createMessage({
         bounce: BounceMode.NoBounce,
         value:  ton("0.05"),
         dest:   storage.reputationAddress,
-        body:   ReputationUpdate { agent: task.assignedAgent, success: 1 },
+        body:   repBody.beginParse(),
     });
     repMsg.send(SEND_MODE_REGULAR);
 }
@@ -449,6 +464,15 @@ get fun getTask(taskId: uint64): cell? {
     val record = storage.tasks.get(taskId);
     if (!record.isFound) { return null; }
     return record.loadValue().toCell();
+}
+
+get fun getBidFields(taskId: uint64, agent: address): [uint64, address, coins, uint32, uint256] {
+    val storage = Storage.load();
+    val bidKey = makeBidKey(taskId, agent);
+    val record = storage.bids.get(bidKey);
+    if (!record.isFound) { return [0, address.fromWorkchainAndHash(0, 0), 0, 0, 0]; }
+    val b = record.loadValue();
+    return [taskId, b.agent, b.amount, b.deliveryTime, b.proposalHash];
 }
 
 get fun getBid(taskId: uint64, agent: address): cell? {

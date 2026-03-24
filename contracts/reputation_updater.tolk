@@ -28,6 +28,7 @@ const PIONEER_LIMIT = 100;
 // ── Opcodes ───────────────────────────────────────────────────
 const OP_TASK_COMPLETED = 0x3001;
 const OP_MANUAL_VERIFY  = 0x3002;
+const OP_UPDATE_COORDINATOR = 0x3003;
 
 
 const ERR_NOT_COORDINATOR  = 3001;
@@ -71,6 +72,10 @@ struct TaskCompleted {
 
 struct ManualVerify {
     agent: address;
+}
+
+struct UpdateCoordinator {
+    coordinator: address;
 }
 
 // type ReputationMessage = TaskCompleted | ManualVerify; // Removed union
@@ -142,6 +147,11 @@ fun onInternalMessage(in: InMessage) {
             agent: body.loadAddress()
         };
         handleManualVerify(in.senderAddress, msg);
+    } else if (opcode == OP_UPDATE_COORDINATOR) {
+        val msg = UpdateCoordinator {
+            coordinator: body.loadAddress()
+        };
+        handleUpdateCoordinator(in.senderAddress, msg);
     } else {
         throw 0xFFFF;
     }
@@ -228,6 +238,17 @@ get fun isTrusted(agent: address, threshold: uint16): uint8 {
     if (!record.isFound) { return 0; }
     if (record.loadValue().score >= threshold) { return 1; }
     return 0;
+}
+get fun getOwner(): address {
+    val storage = Storage.load();
+    return storage.owner;
+}
+
+fun handleUpdateCoordinator(sender: address, msg: UpdateCoordinator) {
+    var storage = Storage.load();
+    assert(sender == storage.owner) throw ERR_NOT_OWNER;
+    storage.coordinatorAddress = msg.coordinator;
+    storage.save();
 }
 get fun getAgentCount(): uint32 {
     val storage = Storage.load();

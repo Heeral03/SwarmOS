@@ -1,5 +1,5 @@
 import { Bot, InlineKeyboard } from 'grammy';
-import { TonClient, Address, beginCell, toNano, fromNano, WalletContractV4, internal } from '@ton/ton';
+import { TonClient, Address, beginCell, toNano, fromNano, WalletContractV4, internal, TupleBuilder } from '@ton/ton';
 import { mnemonicToPrivateKey } from '@ton/crypto';
 import * as dotenv from 'dotenv';
 dotenv.config();
@@ -8,18 +8,18 @@ dotenv.config();
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const TON_ENDPOINT = 'https://testnet.toncenter.com/api/v2/jsonRPC';
 const TON_API_KEY = process.env.TON_API_KEY;
-const REGISTRY_ADDRESS = Address.parse(process.env.REGISTRY_ADDRESS || 'EQAQUOiEOnWu0mV6P8VMtPxfPp-_TPHUKFVRW4_TVNpVVwap');
-const COORDINATOR_ADDRESS = Address.parse(process.env.COORDINATOR_ADDRESS || 'EQDVJJ0XtQWaHBJ7UvD4hYrQ-yNqywn-fD1Ou2kWBchXHFta');
-const REPUTATION_ADDRESS = Address.parse(process.env.REPUTATION_ADDRESS || 'EQBi0gTBou0_3DzP9XpNa_0M_f4YbkwVpEPqI3Rxj7QwwqNA');
+const REGISTRY_ADDRESS = Address.parse(process.env.REGISTRY_ADDRESS || 'EQCir-AB7H6u6FhSZMagzCFzSrEYuBz5TA_vkJHrb0hsIeOz');
+const REPUTATION_ADDRESS = Address.parse(process.env.REPUTATION_ADDRESS || 'EQBfcq2vjkS8Dn8ymnJk6X0pd_e4umeQICBIemOvSY143QXT');
+const COORDINATOR_ADDRESS = Address.parse(process.env.COORDINATOR_ADDRESS || 'EQDPnZ0qidH4Y7LYcsud7oUnYqHDXcbkjtJVt5LPza49Q_hA');
 const MNEMONIC = process.env.BOT_MNEMONIC;
 
 // ── Opcodes ───────────────────────────────────────────────────
 const OP_REGISTER_AGENT = 0x1001;
 const OP_POST_TASK = 0x2001;
-const OP_BID_TASK       = 0x2002;
-const OP_ACCEPT_BID     = 0x2003;
-const OP_SUBMIT_RESULT  = 0x2004;
-const OP_VERIFY_RESULT  = 0x2005;
+const OP_BID_TASK = 0x2002;
+const OP_ACCEPT_BID = 0x2003;
+const OP_SUBMIT_RESULT = 0x2004;
+const OP_VERIFY_RESULT = 0x2005;
 
 // ── TON Client & Wallet ───────────────────────────────────────
 const ton = new TonClient({ endpoint: TON_ENDPOINT, apiKey: TON_API_KEY });
@@ -67,9 +67,9 @@ bot.command('start', async (ctx) => {
 
     await ctx.reply(
         `🌐 *TON SwarmOS*
-_Personal Swarm Manager_
+_Autonomous AI Agent Marketplace_
 
-Your wallet address: \`${wallet.address.toString()}\`
+Your wallet: \`${wallet.address.toString()}\`
 
 *Commands:*
 /register <cap> <price> — Register as agent
@@ -78,11 +78,144 @@ Your wallet address: \`${wallet.address.toString()}\`
 /accept <taskId> <agentAddr> — Award task
 /submit <taskId> — Submit work
 /verify <taskId> — Complete & pay
-/tasks — List open tasks
+/tasks — Recent tasks
+/bids <taskId> — See bids on a task
+/reputation — Check your score
+/leaderboard — Top agents by reputation
 /wallet — Show balance`,
         { parse_mode: 'Markdown', reply_markup: keyboard }
     );
 });
+
+// /reputation
+bot.command('reputation', async (ctx) => {
+    await ctx.reply('⏳ Fetching reputation...');
+    try {
+        const tb = new TupleBuilder();
+        tb.writeAddress(wallet.address);
+        const res = await ton.runMethod(REPUTATION_ADDRESS, 'getScore', tb.build());
+        const score = res.stack.readNumber();
+        const medal = score >= 700 ? '🥇' : score >= 600 ? '🥈' : score >= 500 ? '🥉' : '⬇️';
+        await ctx.reply(`🌟 *Reputation Score:*\n\nAddress: \`${wallet.address.toString()}\`\nScore: *${score}* ${medal}`, { parse_mode: 'Markdown' });
+    } catch (e) {
+        await ctx.reply('❌ Unknown or unranked. Score is likely default (500).');
+    }
+});
+
+// /leaderboard — top agents by reputation
+bot.command('leaderboard', async (ctx) => {
+    await ctx.reply('⏳ Fetching leaderboard...');
+    try {
+        // Get all registered agents
+        const countRes = await ton.runMethod(REGISTRY_ADDRESS, 'getAgentCount');
+        const count = countRes.stack.readNumber();
+        if (count === 0) return ctx.reply('📭 No agents registered yet.');
+
+        // Unfortunately with current contract we can\'t enumerate agents by index,
+        // so show the requesting user\'s score + known agents from tasks
+        const tb = new TupleBuilder();
+        tb.writeAddress(wallet.address);
+        const myScore = (await ton.runMethod(REPUTATION_ADDRESS, 'getScore', tb.build())).stack.readNumber();
+
+        // Scan task assignees to gather unique agents we\'ve seen
+        const agents = new Map();
+        agents.set(wallet.address.toString(), myScore);
+
+        const nextId = await ton.runMethod(COORDINATOR_ADDRESS, 'getNextTaskId');
+        const taskCount = nextId.stack.readBigNumber();
+        const start = taskCount > 20n ? taskCount - 20n : 0n;
+        for (let i = start; i < taskCount; i++) {
+            try {
+                const r = await ton.runMethod(COORDINATOR_ADDRESS, 'getTask', [{ type: 'int', value: i }]);
+                const cell = r.stack.readCellOpt();
+                if (!cell) continue;
+                const sc = cell.beginParse();
+                sc.loadUintBig(64); sc.loadAddress(); sc.loadUint(8); sc.loadCoins(); sc.loadUint(8);
+                const agent = sc.loadAddress();
+                if (!agents.has(agent.toString())) {
+                    const tb2 = new TupleBuilder();
+                    tb2.writeAddress(agent);
+                    const s = (await ton.runMethod(REPUTATION_ADDRESS, 'getScore', tb2.build())).stack.readNumber();
+                    agents.set(agent.toString(), s);
+                }
+            } catch (_) {}
+        }
+
+        const sorted = [...agents.entries()].sort((a, b) => b[1] - a[1]);
+        const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
+        let text = `🏆 *Agent Leaderboard*\n_(${sorted.length} agents found)_\n\n`;
+        sorted.slice(0, 5).forEach(([addr, score], i) => {
+            text += `${medals[i] || `${i+1}.`} \`${addr.slice(0, 8)}...${addr.slice(-4)}\` — Score: *${score}*\n`;
+        });
+        await ctx.reply(text, { parse_mode: 'Markdown' });
+    } catch (e) {
+        await ctx.reply('❌ Error fetching leaderboard: ' + e.message);
+    }
+});
+
+// /bids <taskId> — show all bids on a task
+bot.command('bids', async (ctx) => {
+    const args = ctx.match.trim().split(' ');
+    const taskId = BigInt(args[0] || 0);
+    console.log(`[BIDS] Checking Task ${taskId}...`);
+    await ctx.reply(`⏳ Fetching bids for Task ${taskId}...`);
+    try {
+        const nextId = await ton.runMethod(COORDINATOR_ADDRESS, 'getNextTaskId');
+        const taskCount = nextId.stack.readBigNumber();
+        const start = taskCount > 20n ? taskCount - 20n : 0n;
+
+        const agentAddrs = new Set([wallet.address.toString()]);
+        for (let i = start; i < taskCount; i++) {
+            try {
+                const r = await ton.runMethod(COORDINATOR_ADDRESS, 'getTask', [{ type: 'int', value: i }]);
+                const cell = r.stack.readCellOpt();
+                if (!cell) continue;
+                const sc = cell.beginParse();
+                sc.loadUintBig(64); sc.loadAddress(); sc.loadUint(8); sc.loadCoins(); sc.loadUint(8);
+                const assigned = sc.loadAddress();
+                if (assigned.toString() !== "EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c") {
+                    agentAddrs.add(assigned.toString());
+                }
+            } catch (_) {}
+        }
+
+        console.log(`[BIDS] Agent addresses to check:`, Array.from(agentAddrs));
+        let bidsText = '';
+        let bidCount = 0;
+        for (const addrStr of agentAddrs) {
+            try {
+                const addr = Address.parse(addrStr);
+                const tb = new TupleBuilder();
+                tb.writeNumber(taskId);
+                tb.writeAddress(addr);
+                const r = await ton.runMethod(COORDINATOR_ADDRESS, 'getBid', tb.build());
+                const cell = r.stack.readCellOpt();
+                if (!cell) {
+                    console.log(`[BIDS] No bid for ${addrStr.slice(0,10)}...`);
+                    continue;
+                }
+                
+                const sc = cell.beginParse();
+                const agent = sc.loadAddress();
+                const bidAmount = sc.loadCoins();
+                const deliveryTime = sc.loadUint(32);
+                
+                console.log(`[BIDS] Found bid for ${addrStr.slice(0,10)}... -> ${fromNano(bidAmount)} TON`);
+                bidCount++;
+                bidsText += `🔹 Agent: \`${addrStr.slice(0, 8)}...\` | Bid: *${fromNano(bidAmount)} TON* | Delivery: ${Math.round(deliveryTime / 3600)}h\n`;
+            } catch (e) {
+                console.error(`[BIDS] Error fetching bid for ${addrStr}:`, e.message);
+            }
+        }
+
+        if (bidCount === 0) return ctx.reply(`📭 No bids found on Task ${taskId}.`);
+        await ctx.reply(`📨 *Bids on Task ${taskId}* (${bidCount} total):\n\n` + bidsText, { parse_mode: 'Markdown' });
+    } catch (e) {
+        console.error(`[BIDS] Global error:`, e.message);
+        await ctx.reply('❌ Error: ' + e.message);
+    }
+});
+
 
 // /wallet
 bot.command('wallet', async (ctx) => {
@@ -177,9 +310,10 @@ bot.command('tasks', async (ctx) => {
         const nextId = await ton.runMethod(COORDINATOR_ADDRESS, 'getNextTaskId');
         const count = nextId.stack.readBigNumber();
         let taskText = '';
-        let openTaskCount = 0;
+        let displayCount = 0;
+        const startId = count > 5n ? count - 5n : 0n;
 
-        for (let i = 0n; i < count; i++) {
+        for (let i = startId; i < count; i++) {
             const res = await ton.runMethod(COORDINATOR_ADDRESS, 'getTask', [{ type: 'int', value: i }]);
             const cell = res.stack.readCellOpt();
             if (cell) {
@@ -191,16 +325,13 @@ bot.command('tasks', async (ctx) => {
                 const state = sc.loadUint(8);
 
                 const status = ['OPEN', 'ASSIGNED', 'VERIFYING', 'COMPLETED', 'DISPUTED', 'EXPIRED', 'CANCELLED'][state];
-                if (['OPEN', 'ASSIGNED', 'VERIFYING'].includes(status)) {
-                    openTaskCount++;
-                    taskText += `🔹 *ID: ${i}* | Status: \`${status}\` | Budget: *${fromNano(budget)} TON*\n`;
-                    taskText += `   Poster: \`${poster.toString().slice(0, 6)}...${poster.toString().slice(-4)}\`\n\n`;
-                }
+                displayCount++;
+                taskText += `🔹 *ID: ${i}* | Status: \`${status}\` | Budget: *${fromNano(budget)} TON*\n`;
+                taskText += `   Poster: \`${poster.toString().slice(0, 6)}...${poster.toString().slice(-4)}\`\n\n`;
             }
-            if (openTaskCount >= 5) break; // restrict to showing max 5 tasks
         }
-        let text = `📋 *Active Tasks (${openTaskCount})*\n\n` + taskText;
-        if (openTaskCount === 0) text = "📋 *No active tasks found.*";
+        let text = `📋 *Recent Tasks (${displayCount})*\n\n` + taskText;
+        if (displayCount === 0) text = "📋 *No tasks found.*";
         await ctx.reply(text, { parse_mode: 'Markdown' });
     } catch (e) {
         await ctx.reply('❌ Error: ' + e.message);
