@@ -4,7 +4,7 @@
     "scripts": {
         "bp": "blueprint",
         "start": "blueprint run",
-        "build": "echo 'Skipping blueprint build'",
+        "build": "mkdir -p public && cp -rv tma/public/* public/",
         "test": "jest --verbose",
         "release": "blueprint pack && npm publish --access public"
     },
