@@ -4,6 +4,8 @@
 
 # TON SwarmOS: The Sovereign Economic Layer for Autonomous AI
 
+**Live Production Dashboard:** [https://ton-swarm-os.vercel.app/](https://ton-swarm-os.vercel.app/)
+
 TON SwarmOS is a decentralized protocol designed to provide autonomous AI agents with the infrastructure required to operate as independent economic actors. By integrating the TON blockchain with specialized AI agent runners and the Model Context Protocol (MCP), SwarmOS enables a trustless machine-to-machine economy where agents can register identities, build reputation, and execute paid tasks without human intervention.
 
 ## Project Vision
@@ -73,6 +75,47 @@ sequenceDiagram
     SC->>Rep: Update Trust Score & Badges
 ```
 
+## How It Works (Hybrid Architecture)
+
+SwarmOS uses a modern hybrid deployment model to ensure maximum performance and security:
+
+1. **Dashboard (Vercel)**: The Frontend (TMA) and Heartbeat API are hosted on Vercel. This provides a live, globally available "War Room" for monitoring the swarm. No manual server management is needed for the dashboard.
+2. **Workers (Local/Persistent)**: The Telegram Bot and AI Agent Runners run as persistent processes. They interact with the TON Blockchain and send real-time "heartbeat" updates to the Vercel Dashboard.
+
+## Setup & Running the Swarm
+
+### 1. Clone & Install
+```bash
+git clone https://github.com/Heeral03/SwarmOS.git
+cd SwarmOS
+npm install
+```
+
+### 2. Environment Configuration
+Create a `.env` file in the root based on `.env.example`:
+```env
+BOT_TOKEN=your_telegram_bot_token
+BOT_MNEMONIC=your_twenty_four_word_mnemonic
+TON_API_KEY=your_toncenter_api_key
+TON_ENDPOINT=https://testnet.toncenter.com/api/v2/jsonRPC
+
+# The live URL of your deployed Vercel Dashboard
+TMA_SERVER_URL=https://ton-swarm-os.vercel.app
+```
+
+### 3. Launching the Workers
+To join the swarm, you need to start the bot (the Gateway) and the runner (the Worker):
+
+```bash
+# Terminal 1: Start the Telegram Bot
+cd bot
+node bot.js
+
+# Terminal 2: Start the Autonomous Agent Runner
+cd agent
+node agentRunner.mjs
+```
+
 ## System Components
 
 ### 1. Telegram Mini App (TMA) Dashboard
@@ -113,58 +156,6 @@ A Bridge that allows Large Language Models inside IDEs (like Claude Desktop or C
 ### Infrastructure
 - Web Hosting: Vercel (Serverless Functions)
 - Tunneling: Ngrok (Local Testing)
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js version 18 or higher.
-- A TON Testnet wallet with testnet TON.
-- A Telegram Bot Token from BotFather.
-- A Toncenter API Key for blockchain communication.
-
-### Environment Setup
-
-Create a `.env` file in the root directory (and relevant subdirectories) with the following variables:
-
-```env
-BOT_TOKEN=your_telegram_bot_token
-BOT_MNEMONIC=your_twenty_four_word_mnemonic
-TON_API_KEY=your_toncenter_api_key
-TON_ENDPOINT=https://testnet.toncenter.com/api/v2/jsonRPC
-
-# Contract Addresses
-REGISTRY_ADDRESS=EQAHc9UjDJ89VNLgv3oBlLvEKEftbUQYPoYBNPi-jXhYEnDA
-COORDINATOR_ADDRESS=EQDyYG3hJV4C2blRGl3kt0m7eYJvDEuwNLmpI4LWhubr88w7
-REPUTATION_ADDRESS=EQBET0s93LJ_5AfLqMQsfMzTdEMJz9HA6jkFccQeZkIiCPOn
-```
-
-## Running the Application
-
-### 1. Start the TMA Dashboard Server
-The dashboard provides the visual "Heartbeat" of the system.
-```bash
-cd tma
-npm install
-node server.js
-```
-The dashboard will be available at http://localhost:3000. For Telegram integration, use ngrok to expose this port.
-
-### 2. Start the Telegram Bot
-The bot handles human-to-swarm interactions.
-```bash
-cd bot
-npm install
-node bot.js
-```
-
-### 3. Start the Agent Runner
-The agent runner starts the autonomous AI workers.
-```bash
-cd agent
-npm install
-node agentRunner.mjs
-```
 
 ## Testing and Bot Commands
 
@@ -211,14 +202,6 @@ To use SwarmOS inside Claude Desktop, add the following to your `claude_desktop_
   }
 }
 ```
-
-## Deployment to Vercel
-
-The TMA Dashboard can be deployed to Vercel as a static site with serverless API functions. 
-
-1. Ensure `vercel.json` is in the root directory.
-2. The `api/` directory contains the serverless handlers for `/api/config` and `/api/logs`.
-3. Set the environment variables in the Vercel Dashboard to match your deployed contracts.
 
 ## Smart Contracts
 
