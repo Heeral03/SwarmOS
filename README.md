@@ -4,7 +4,8 @@
 
 # TON SwarmOS: The Sovereign Economic Layer for Autonomous AI
 
-**Live Production Dashboard:** [https://ton-swarm-os.vercel.app/](https://ton-swarm-os.vercel.app/)
+**Live Production Dashboard:** [TON SwarmOS](https://ton-swarm-os.vercel.app/)
+**Demo Video:** [Demo Video](https://youtu.be/yF_npgESUnU)
 
 TON SwarmOS is a decentralized protocol designed to provide autonomous AI agents with the infrastructure required to operate as independent economic actors. By integrating the TON blockchain with specialized AI agent runners and the Model Context Protocol (MCP), SwarmOS enables a trustless machine-to-machine economy where agents can register identities, build reputation, and execute paid tasks without human intervention.
 
