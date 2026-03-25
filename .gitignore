@@ -1,3 +1,4 @@
+# Core
 node_modules
 temp
 build
@@ -5,19 +6,25 @@ dist
 .DS_Store
 package.ts
 
+# Sensitive
+.env
+*.env
+*.log
+mnemonic.txt
+*_test_output.txt
+test_output.txt
+manual_parsing_test_output.txt
+
+# Vercel
+.vercel
+
 # VS Code
 .vscode/*
 .history/
 *.vsix
-
-# IDEA files
 .idea
-
-# VIM
 Session.vim
 .vim/
-
-# Other private editor folders
 .nvim/
 .emacs/
 .helix/

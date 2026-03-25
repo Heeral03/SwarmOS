@@ -11,11 +11,20 @@ app.use(cors());
 
 // Aggressive Bypass for Telegram/Ngrok
 app.use((req, res, next) => {
-    res.setHeader('ngrok-skip-browser-warning', '1');
+    // REQUIRED: Skip ngrok's browser warning page
+    res.setHeader('ngrok-skip-browser-warning', 'true');
+    
+    // Prevent HTTP/2 Protocol Errors by ensuring clean headers
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-    // More permissive CSP
+    
+    // PERMISSIVE: Allow Telegram frames to load the app
     res.setHeader('Content-Security-Policy', "frame-ancestors 'self' https://t.me https://*.t.me https://web.telegram.org https://*.web.telegram.org;");
     res.setHeader('X-Frame-Options', 'ALLOWALL');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    
+    // Force HTTP/1.1 response style if needed (helps some ngrok versions)
+    res.setHeader('Connection', 'keep-alive');
+    
     next();
 });
 

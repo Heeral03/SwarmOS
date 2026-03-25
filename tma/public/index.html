@@ -264,17 +264,22 @@
 
     <!-- 2. WAR ROOM DASHBOARD -->
     <section id="dashboard" style="padding:0; margin:0; max-width: none;">
-        <nav style="position: sticky; background: rgba(5,8,10,0.9); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border-dim); transition: none;">
-            <div class="brand">
-                <div class="logo-pair">
-                    <div class="ton-icon-official" style="width:28px; height:28px; padding:4px; border-radius:4px;">
-                        <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M28 44L12 20H44L28 44Z" fill="white"/>
-                        </svg>
+        <nav style="position: sticky; background: rgba(5,8,10,0.9); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border-dim); transition: none; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 24px;">
+                <button onclick="exitWarRoom()" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; font-family: 'JetBrains Mono'; font-size: 14px; font-weight: bold; display: flex; align-items: center; transition: 0.3s color ease;" onmouseover="this.style.color='white'" onmouseout="this.style.color='var(--text-secondary)'">
+                    ← HOME
+                </button>
+                <div class="brand">
+                    <div class="logo-pair">
+                        <div class="ton-icon-official" style="width:28px; height:28px; padding:4px; border-radius:4px;">
+                            <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M28 44L12 20H44L28 44Z" fill="white"/>
+                            </svg>
+                        </div>
+                        <img src="logo.png" alt="Logo" style="width:28px; height:28px; border-radius:4px; border: 1px solid var(--neon-blue);">
                     </div>
-                    <img src="logo.png" alt="Logo" style="width:28px; height:28px; border-radius:4px; border: 1px solid var(--neon-blue);">
+                    <h1 class="mono" style="font-size:12px; margin-left:12px;"><span class="ton-blue">TON</span> <span class="swarm-white">SwarmOS</span></h1>
                 </div>
-                <h1 class="mono" style="font-size:12px; margin-left:12px;"><span class="ton-blue">TON</span> <span class="swarm-white">SwarmOS</span></h1>
             </div>
             <div id="ton-connect"></div>
         </nav>

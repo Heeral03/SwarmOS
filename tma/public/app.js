@@ -265,4 +265,23 @@ function enterWarRoom() {
     }, 800);
 }
 
+function exitWarRoom() {
+    const lp = document.getElementById('landing-page');
+    const db = document.getElementById('dashboard');
+    
+    sessionStorage.removeItem('swarmOS_dashboard');
+    
+    db.style.opacity = '0';
+    db.classList.remove('active');
+    
+    setTimeout(() => {
+        db.style.display = 'none';
+        lp.style.display = 'block';
+        setTimeout(() => {
+            lp.style.opacity = '1';
+            lp.style.filter = 'blur(0px)';
+        }, 50);
+    }, 800);
+}
+
 document.addEventListener('DOMContentLoaded', init);
