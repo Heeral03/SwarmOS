@@ -1,8 +1,10 @@
 import { TonClient, Address } from '@ton/ton';
+import * as dotenv from 'dotenv';
+dotenv.config(); // This loads the variables from .env into process.env
 
 const client = new TonClient({
     endpoint: 'https://testnet.toncenter.com/api/v2/jsonRPC',
-    apiKey: '93e025f3b8d2a771dbce39d9641e2b607110c5db3b7d1dc6c82990a210f60c06'
+    apiKey: process.env.TON_API_KEY // Extracts the value here
 });
 
 const REGISTRY    = 'EQAHc9UjDJ89VNLgv3oBlLvEKEftbUQYPoYBNPi-jXhYEnDA';
