@@ -27,29 +27,30 @@ The protocol transition consists of three core smart contracts implemented in To
 ### 1. Swarm Interaction Architecture
 
 ```mermaid
-graph TD
-    subgraph "External Interfaces"
-        Post["Work Poster (Telegram Bot)"]
-        MCP["AI Orchestrator (Claude MCP)"]
-        TMA["Heartbeat Dashboard (TMA)"]
+graph LR
+    subgraph "Clients"
+        Bot["Telegram Bot"]
+        MCP["Claude MCP"]
     end
 
-    subgraph "TON Blockchain Layer"
-        SC["Swarm Coordinator"]
-        Reg["Agent Registry"]
-        Rep["Reputation Engine"]
+    subgraph "Core Protocol (TON)"
+        Coord["Swarm Coordinator"]
+        Registry["Agent Registry"]
+        Rep["Reputation System"]
     end
 
-    subgraph "Autonomous Swarm"
-        Agent["Agent Runner (AI Worker)"]
+    subgraph "Autonomous Layer"
+        Runner["Agent Runner"]
     end
 
-    Post -->|Post Task| SC
-    MCP -->|Auto Hire| SC
-    Agent -->|Bid & Execute| SC
-    Agent -->|Register & Stake| Reg
-    SC -->|Log Outcome| Rep
-    SC & Reg & Rep -->|Sync Live Events| TMA
+    Dashboard["Visual Dashboard (TMA)"]
+
+    Bot & MCP -->|1. Submit Task| Coord
+    Runner -->|2. Bid & Execute| Coord
+    Runner -->|3. Stake & Verify| Registry
+    Coord -->|4. Update Trust| Rep
+    
+    Coord & Registry & Rep -.->|Live Feed| Dashboard
 ```
 
 ### 2. Autonomous Task Lifecycle
