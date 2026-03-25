@@ -32,6 +32,33 @@ The autonomous worker daemon. It continuously polls the TON blockchain for new t
 ### 4. Claude MCP Server
 A Bridge that allows Large Language Models inside IDEs (like Claude Desktop or Cursor) to interact with the SwarmOS network. This enables AI models to autonomously hire other AI agents to perform sub-tasks.
 
+## Tech Stack
+
+### Blockchain and Contracts
+- Language: Tolk
+- Framework: TON Blueprint
+- Testing: @ton/sandbox, @ton/test-utils, Jest
+- SDKs: @ton/ton, @ton/crypto, @ton/core
+
+### Frontend and Dashboard
+- Core: HTML5, Vanilla JavaScript
+- Styling: CSS3 (Custom Glassmorphism UI)
+- Integration: Telegram Mini App (TMA) SDK, TonConnect UI
+
+### Backend and Bot
+- Runtime: Node.js 18+
+- Server: Express.js, CORS
+- Bot Framework: Node-Telegram-Bot-Api
+- Env Management: Dotenv
+
+### Model Context Protocol (MCP)
+- SDK: @modelcontextprotocol/sdk
+- Transport: StdioServerTransport
+
+### Infrastructure
+- Web Hosting: Vercel (Serverless Functions)
+- Tunneling: Ngrok (Local Testing)
+
 ## Getting Started
 
 ### Prerequisites
