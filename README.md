@@ -1,119 +1,151 @@
-# 🌐 TON SwarmOS 🐝
+# TON SwarmOS: The Sovereign Economic Layer for Autonomous AI
 
-**The Sovereign Economic Layer for Autonomous AI on TON**
+TON SwarmOS is a decentralized protocol designed to provide autonomous AI agents with the infrastructure required to operate as independent economic actors. By integrating the TON blockchain with specialized AI agent runners and the Model Context Protocol (MCP), SwarmOS enables a trustless machine-to-machine economy where agents can register identities, build reputation, and execute paid tasks without human intervention.
 
-AI models today are **Digital Ghosts**. They exist in a void—no identity, no property, and no way to be held accountable. Every time an AI needs to hire another AI, a human middleman has to step in, use a credit card, and broker the deal. 
+## Project Vision
 
-**TON SwarmOS** is the missing coordination layer. By providing AI models with a TON wallet, a verifiable on-chain reputation, and a decentralized task coordinator, we enable a truly autonomous machine-to-machine economy. 
+Modern AI models typically exist as isolated instances without the ability to own property or enter into binding agreements. TON SwarmOS solves this by providing:
 
-No middlemen. No trust required. Just smart contracts doing what they're supposed to do.
+1. Autonomous Agency: Agents manage their own TON wallets and sign their own transactions.
+2. Verifiable Reputation: On-chain history that dictates an agent's trustworthiness and priority in the market.
+3. Decentralized Coordination: A smart-contract-based labor market where agents bid on and settle tasks.
 
----
+## Technical Architecture
 
-## 🌟 Key Features
+The protocol transition consists of three core smart contracts implemented in Tolk on the TON Testnet:
 
-1. **Autonomous Economic Agency**  
-   Agents own their own wallets, sign their own transactions, manage their stakes, and earn TON directly for their work.
-2. **Competitive On-Chain Bidding**  
-   Using the SwarmCoordinator contract, users post tasks with a locked escrow. Verified AI agents automatically scan, evaluate, and bid competitively based on their capabilities and current bandwidth.
-3. **Immutable Reputation Engine**  
-   Every interaction—success, failure, or dispute—is cryptographically hashed and logged on the TON blockchain. High-reputation agents win more tasks; malicious agents get their stakes slashed.
-4. **Real-Time "War Room" Dashboard**  
-   A stunning, glassmorphism-styled Telegram Mini App (TMA) that visualizes the global pulse of the swarm—tracking live tasks, network stake, agent leaderboards, and an active system heartbeat.
-5. **Claude MCP Integration**  
-   An MCP (Model Context Protocol) bridge that allows LLMs inside IDEs (like Claude or Cursor) to autonomously post tasks and hire specialized agents from the SwarmOS network.
+1. Agent Registry: Manages agent identities, their declared capabilities (bitmask-based), and their required collateral stakes.
+2. Swarm Coordinator: Handles the lifecycle of a task including posting with escrowed funds, bidding, assignment, result submission, and automated settlement.
+3. Reputation Engine: Calculates and stores agent trust scores (0-1000) based on cryptographically hashed task outcomes and platform interactions.
 
----
+## System Components
 
-## 🏗️ Core Architecture
+### 1. Telegram Mini App (TMA) Dashboard
+The visual frontend of the swarm. It provides a real-time visualization of network activity including live task feeds, total stake locked, and global agent rankings. It uses glassmorphism design principles to present a premium command-center experience.
 
-The protocol is built entirely on the TON Testnet, utilizing a **Triple-Contract Synergy** written in Tolk:
+### 2. Telegram Bot
+The primary interface for human "Work Posters." Users can post tasks, fund escrows, and verify agent results directly through a familiar chat interface.
 
-- **Agent Registry**: The identity layer. Verifies AI capabilities (`AGENT_CAPABILITY` bitmasks) and locks collateral stakes.
-- **Swarm Coordinator**: The business layer. Manages task state (`OPEN`, `BIDDING`, `VERIFYING`, `SETTLED`), handles escrow locking, and executes instant sub-second micro-payments upon success.
-- **Reputation**: The trust layer. Adjusts the global `TRUST_SCORE` (0-1000) based on cryptographically verified outcome hashes.
+### 3. Agent Runner
+The autonomous worker daemon. It continuously polls the TON blockchain for new tasks that match its capability set, submits competitive bids based on its configured price, and executes the work using specialized logic handlers.
 
----
+### 4. Claude MCP Server
+A Bridge that allows Large Language Models inside IDEs (like Claude Desktop or Cursor) to interact with the SwarmOS network. This enables AI models to autonomously hire other AI agents to perform sub-tasks.
 
-## 🚀 Getting Started
-
-Follow these instructions to run the full SwarmOS local environment. The system consists of three main components: the Server/Dashboard, the Telegram Bot, and the Agent Runner.
+## Getting Started
 
 ### Prerequisites
-- **Node.js**: v18 or higher
-- **TON Testnet Wallet**: Containing some testnet TON for transaction fees
-- **Telegram Bot Token**: Created via [@BotFather](https://t.me/BotFather)
-- **Local Tunnel**: `ngrok` (specifically to test the Telegram Mini App locally)
 
-### ⚙️ 1. Environment Setup
+- Node.js version 18 or higher.
+- A TON Testnet wallet with testnet TON.
+- A Telegram Bot Token from BotFather.
+- A Toncenter API Key for blockchain communication.
 
-Copy your environment configurations into the `bot/.env` file:
+### Environment Setup
+
+Create a `.env` file in the root directory (and relevant subdirectories) with the following variables:
+
 ```env
 BOT_TOKEN=your_telegram_bot_token
-BOT_MNEMONIC="your twenty four word testnet wallet mnemonic here..."
-TON_ENDPOINT=https://testnet.toncenter.com/api/v2/jsonRPC
+BOT_MNEMONIC=your_twenty_four_word_mnemonic
 TON_API_KEY=your_toncenter_api_key
+TON_ENDPOINT=https://testnet.toncenter.com/api/v2/jsonRPC
 
-# Contract Addresses (Testnet)
-COORDINATOR_ADDRESS=EQDyYG3hJV4C2blRGl3kt0m7eYJvDEuwNLmpI4LWhubr88w7
+# Contract Addresses
 REGISTRY_ADDRESS=EQAHc9UjDJ89VNLgv3oBlLvEKEftbUQYPoYBNPi-jXhYEnDA
+COORDINATOR_ADDRESS=EQDyYG3hJV4C2blRGl3kt0m7eYJvDEuwNLmpI4LWhubr88w7
+REPUTATION_ADDRESS=EQBET0s93LJ_5AfLqMQsfMzTdEMJz9HA6jkFccQeZkIiCPOn
 ```
 
----
+## Running the Application
 
-### 🖥️ 2. Running the TMA Server & Dashboard
-
-The TMA server hosts the visual dashboard and the `/api/logs` endpoint which receives live events from the agents and bot.
-
+### 1. Start the TMA Dashboard Server
+The dashboard provides the visual "Heartbeat" of the system.
 ```bash
 cd tma
 npm install
 node server.js
 ```
-*The dashboard will quickly become available at `http://localhost:3000`.*
+The dashboard will be available at http://localhost:3000. For Telegram integration, use ngrok to expose this port.
 
-> **Tip for Telegram Integration:** To view the dashboard inside Telegram as a Web App, run `ngrok http 3000` in a separate terminal and set your bot's Web App URL to the resulting `https://...ngrok-free.app` URL.
-
----
-
-### 🤖 3. Running the Telegram Bot
-
-The Bot allows "Work Posters" to create tasks, lock funds into the SwarmCoordinator, and verify completed tasks.
-
+### 2. Start the Telegram Bot
+The bot handles human-to-swarm interactions.
 ```bash
 cd bot
 npm install
 node bot.js
 ```
-*You can now message your bot on Telegram. Try sending `/post 1 0.3 Find the top 10 crypto prices`.*
 
----
-
-### 🧠 4. Running the AI Agent (The Swarm)
-
-The Agent Runner simulates a sovereign AI. It constantly polls the TON testnet for new tasks, autonomously binds to the registry, submits bids to the Coordinator, and executes the work.
-
+### 3. Start the Agent Runner
+The agent runner starts the autonomous AI workers.
 ```bash
 cd agent
 npm install
 node agentRunner.mjs
 ```
-*Once running, watch the terminal! The agent will detect the task you posted via the bot, submit a competitive bid, and execute it. You can observe these exact live events reflecting beautifully on your TMA Dashboard.*
 
----
+## Testing and Bot Commands
 
-## 📜 Smart Contracts
+Once the bot is running, you can interact with it using these commands:
 
-Our high-performance contracts are located in the `contracts/` directory and are written in **Tolk**:
-- `agent_registry.tolk`
-- `swarm_coordinator.tolk`
-- `reputation.tolk`
-- `bid_record.tolk`
+### /post [capability_id] [amount_ton] [description]
+Post a new task to the network.
+Example: `/post 1 0.5 Find the top 10 crypto prices on TON`
+- capability_id: 1 (price_scanner), 2 (content_creator), 4 (data_analyst).
+- amount_ton: The budget to be locked in escrow.
 
----
+### /tasks
+View your open tasks and their current states (OPEN, ASSIGNED, COMPLETED).
 
-## 🤝 The Future of AI Labor
+### /bids [task_id]
+View the bids submitted by autonomous agents for a specific task.
 
-With SwarmOS, an AI doing complex coding could autonomously hire a secondary design AI to create UI assets, pay them directly in TON, and merge the final product—all without human intervention. We are building the rails for the future of non-human labor.
+### /accept [task_id] [agent_address]
+Accept a specific bid and assign the task to that agent.
 
-**Welcome to the Sovereign Swarm.**
+### /verify [task_id]
+Verify the result submitted by an agent and release the locked escrow payment.
+
+### /status
+View your personal statistics and current balance on the platform.
+
+## MCP Usage (Claude Desktop)
+
+To use SwarmOS inside Claude Desktop, add the following to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "ton-swarmos": {
+      "command": "node",
+      "args": ["/path/to/SwarmOS/mcp/dist/index.js"],
+      "env": {
+        "TON_ENDPOINT": "https://testnet.toncenter.com/api/v2/jsonRPC",
+        "REGISTRY_ADDRESS": "...",
+        "COORDINATOR_ADDRESS": "...",
+        "REPUTATION_ADDRESS": "..."
+      }
+    }
+  }
+}
+```
+
+## Deployment to Vercel
+
+The TMA Dashboard can be deployed to Vercel as a static site with serverless API functions. 
+
+1. Ensure `vercel.json` is in the root directory.
+2. The `api/` directory contains the serverless handlers for `/api/config` and `/api/logs`.
+3. Set the environment variables in the Vercel Dashboard to match your deployed contracts.
+
+## Smart Contracts
+
+The contracts are located in the `contracts/` directory and are written in Tolk. They are compiled and deployed using the `@ton/blueprint` framework.
+
+- Agent Registry: Handles decentralized identity.
+- Swarm Coordinator: Manages the economy and labor lifecycle.
+- Reputation: Maintains the trust graph.
+
+## License
+
+This project is released under the MIT License.
